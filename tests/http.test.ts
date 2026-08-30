@@ -1,0 +1,66 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { createHttpApp } from "../src/http/server.js";
+
+test("REST is authenticated and provider-neutral", async () => {
+  process.env.GATEWAY_CONFIG_PATH = "./src/config/config.test.yaml";
+  process.env.API_KEY = "test-key";
+  process.env.DEV_SIMULATION = "true";
+  const { app, runtime } = await createHttpApp();
+  const server = app.listen(0, "127.0.0.1");
+  await new Promise<void>(resolve => server.once("listening", resolve));
+  const address = server.address();
+  if (!address || typeof address === "string") throw new Error("No test port");
+  const base = `http://127.0.0.1:${address.port}`;
+  try {
+    const dashboard = await fetch(`${base}/`);
+    assert.equal(dashboard.status, 200);
+    assert.match(await dashboard.text(), /AI Communications Gateway/);
+    assert.equal((await fetch(`${base}/app.js`)).status, 200);
+    const spec = await (await fetch(`${base}/openapi.json`)).json() as any;
+    assert.ok(spec.paths["/auth/session"]);
+    assert.ok(spec.paths["/v1/endpoints/{id}"]);
+    assert.ok(spec.paths["/v1/calls/{id}/voice-session"]);
+    assert.ok(spec.paths["/webhooks/textbee/{providerId}"]);
+    const webhookRoot = await fetch(`${base}/`, { headers: { "x-forwarded-host": "hooks-comms.giscop.com" } });
+    assert.equal(webhookRoot.status, 200);
+    assert.equal(((await webhookRoot.json()) as any).service, "ai-comms-provider-webhooks");
+    assert.equal((await fetch(`${base}/v1/endpoints`, { headers: { "x-forwarded-host": "hooks-comms.giscop.com", authorization: "Bearer test-key" } })).status, 404);
+    assert.equal((await fetch(`${base}/v1/endpoints`)).status, 401);
+    const anonymousSession = await fetch(`${base}/auth/session`);
+    assert.equal(anonymousSession.status, 200);
+    assert.equal(((await anonymousSession.json()) as any).authenticated, false);
+    assert.equal((await fetch(`${base}/auth/session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ apiKey: "wrong" }) })).status, 401);
+    const login = await fetch(`${base}/auth/session`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ apiKey: "test-key" }) });
+    assert.equal(login.status, 200);
+    const cookie = login.headers.get("set-cookie");
+    assert.ok(cookie?.includes("gateway_session="));
+    assert.ok(cookie?.includes("HttpOnly"));
+    assert.ok(cookie?.includes("SameSite=Strict"));
+    assert.equal((await fetch(`${base}/v1/endpoints`, { headers: { cookie: cookie!.split(";")[0] } })).status, 200);
+    const logout = await fetch(`${base}/auth/session`, { method: "DELETE", headers: { cookie: cookie!.split(";")[0] } });
+    assert.equal(logout.status, 204);
+    assert.match(logout.headers.get("set-cookie") ?? "", /Max-Age=0/);
+    const headers = { authorization: "Bearer test-key", "content-type": "application/json" };
+    const endpoints = await fetch(`${base}/v1/endpoints`, { headers });
+    assert.equal(endpoints.status, 200);
+    const ready = await (await fetch(`${base}/readyz`)).json() as any;
+    assert.equal(ready.status, "ready");
+    assert.equal(ready.components.persistence.ok, true);
+    const missingCall = await fetch(`${base}/v1/calls/no-such-call`, { headers });
+    assert.equal(missingCall.status, 404);
+    assert.equal(((await missingCall.json()) as any).error.code, "not_found");
+    const invalidMessage = await fetch(`${base}/v1/messages`, { method: "POST", headers, body: JSON.stringify({ from: "android-test-01" }) });
+    assert.equal(invalidMessage.status, 422);
+    assert.equal(((await invalidMessage.json()) as any).error.code, "validation_error");
+    assert.equal((await fetch(`${base}/v1/calls?limit=NaN`, { headers })).status, 422);
+    assert.equal((await fetch(`${base}/definitely-not-a-route`)).status, 404);
+    const message = await fetch(`${base}/v1/messages`, { method: "POST", headers, body: JSON.stringify({ from: "android-test-01", to: "3025559876", body: "hello" }) });
+    assert.equal(message.status, 201);
+    const payload = await message.json() as any;
+    assert.equal(payload.data.provider, "messaging-test");
+  } finally {
+    await new Promise<void>(resolve => server.close(() => resolve()));
+    await runtime.shutdown();
+  }
+});

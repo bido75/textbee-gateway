@@ -1,0 +1,23 @@
+runtimeMode: LIVE_SERVICES
+providers:
+  - id: textbee-self-hosted
+    type: textbee
+    capabilities: [sms]
+    config:
+      apiKey: "${TEXTBEE_API_KEY}"
+      deviceId: "${TEXTBEE_DEVICE_ID}"
+      baseUrl: "http://textbee-api:3001/api/v1"
+      webhookSigningSecret: "${TEXTBEE_WEBHOOK_SIGNING_SECRET}"
+cellularVoiceProviders: []
+cellularEndpoints:
+  - id: android-home-01
+    lineNumberStatus: unverified
+    capabilities: [sms]
+    messaging: { provider: textbee-self-hosted }
+routing:
+  - { channel: sms, match: "*", provider: textbee-self-hosted }
+persistence:
+  type: postgres+redis
+  config:
+    postgresUrl: "${POSTGRES_URL}"
+    redisUrl: "${REDIS_URL}"

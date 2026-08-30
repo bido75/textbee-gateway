@@ -1,0 +1,10 @@
+providers:
+  - id: stub
+    type: stub
+    capabilities: [voice, sms, mms]
+    config: {}
+
+routing:
+  - { channel: voice, match: "*", provider: stub }
+  - { channel: sms,   match: "*", provider: stub }
+  - { channel: mms,   match: "*", provider: stub }

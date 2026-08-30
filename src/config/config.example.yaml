@@ -1,0 +1,115 @@
+# AI Communications Gateway — provider & routing config
+#
+# Swap providers by editing this file only. Nothing in the MCP server,
+# session manager, or adapter interface needs to change.
+
+runtimeMode: LIVE_SERVICES
+providers:
+  - id: stub
+    type: stub
+    capabilities: [voice, sms, mms]
+    config: {}
+
+  - id: textbee-home-phone
+    type: textbee
+    capabilities: [sms, mms]
+    config:
+      apiKey: "${TEXTBEE_API_KEY}"       # from the TextBee dashboard
+      deviceId: "${TEXTBEE_DEVICE_ID}"   # the Android device id in TextBee
+      webhookSigningSecret: "${TEXTBEE_WEBHOOK_SIGNING_SECRET}"  # from the TextBee dashboard's webhook settings — strongly recommended
+
+  - id: asterisk-pbx
+    type: asterisk-ari
+    capabilities: [voice]
+    config:
+      baseUrl: "http://localhost:8088"
+      username: "ai-gateway"
+      password: "${ARI_PASSWORD}"
+      appName: "ai-gateway"
+      originateContext: "from-ai-agent"
+      trunkEndpoint: "sip-trunk-1"       # matches docker/asterisk/pjsip.conf
+
+  - id: whatsapp-main
+    type: whatsapp
+    capabilities: [chat]                 # messaging only — see whatsapp-adapter.ts for why
+    config:
+      authDir: "./.whatsapp-session"     # persists login across restarts (scan QR once)
+      printQrOnConnect: true
+
+  - id: livekit-webrtc
+    type: livekit
+    capabilities: [voice]                # app-to-app WebRTC calling, not PSTN
+    config:
+      url: "${LIVEKIT_URL}"              # e.g. https://your-project.livekit.cloud
+      apiKey: "${LIVEKIT_API_KEY}"
+      apiSecret: "${LIVEKIT_API_SECRET}"
+
+# CellularVoiceProvider instances — a SEPARATE registry from `providers`
+# above, since the interface is narrower (voice only, no sendMessage/no
+# generic capabilities). Each instance corresponds to one physical
+# Bluetooth-paired Android phone.
+cellularVoiceProviders:
+  - id: chan-mobile-android-home-01
+    type: asterisk-chan-mobile   # reference/prototype backend — see cellular/asterisk-chan-mobile-provider.ts for honest limitations
+    config:
+      baseUrl: "http://localhost:8088"
+      username: "ai-gateway"
+      password: "${ARI_PASSWORD}"
+      appName: "ai-gateway-mobile"        # distinct Stasis app from the SIP-trunk adapter
+      chanMobileDevice: "mobile0"          # matches docker/asterisk/mobile.conf
+
+# CellularEndpoints — the real domain object: "one Android + one SIM" as one
+# logical identity. Nothing above this layer should ever address "TextBee"
+# or "chan_mobile" directly; address the endpoint id instead.
+cellularEndpoints:
+  - id: android-home-01
+    phoneNumber: "${CELLULAR_LINE_NUMBER}"
+    lineNumberStatus: configured
+    capabilities: [sms, mms, voice]
+    messaging:
+      provider: textbee-home-phone   # SMS/MMS always goes through TextBee, never through the voice provider
+    voice:
+      provider: chan-mobile-android-home-01
+
+routing:
+  # Voice: everything through the self-hosted Asterisk/Kamailio PBX by default.
+  # Route specific destinations to LiveKit instead by adding a rule with a
+  # more specific "match" prefix above this one (rules are matched in order,
+  # most specific prefix wins over "*").
+  - channel: voice
+    match: "*"
+    provider: asterisk-pbx
+
+  # SMS/MMS: everything through the TextBee Android gateway
+  - channel: sms
+    match: "*"
+    provider: textbee-home-phone
+  - channel: mms
+    match: "*"
+    provider: textbee-home-phone
+
+  # Chat: WhatsApp
+  - channel: chat
+    match: "*"
+    provider: whatsapp-main
+
+# Durable storage + cross-process event bus. Omit this block entirely to
+# fall back to in-memory (zero external dependencies, but state is lost on
+# restart and can't be shared across processes).
+persistence:
+  type: postgres+redis
+  config:
+    postgresUrl: "${POSTGRES_URL}"   # e.g. postgres://user:pass@localhost:5432/ai_comms_gateway
+    redisUrl: "${REDIS_URL}"         # e.g. redis://localhost:6379
+
+# --- Example: development mode using only the in-memory stub, no external deps at all ---
+# providers:
+#   - id: stub
+#     type: stub
+#     capabilities: [voice, sms, mms]
+#     config: {}
+# routing:
+#   - { channel: voice, match: "*", provider: stub }
+#   - { channel: sms,   match: "*", provider: stub }
+#   - { channel: mms,   match: "*", provider: stub }
+# (persistence block omitted -> defaults to in-memory)

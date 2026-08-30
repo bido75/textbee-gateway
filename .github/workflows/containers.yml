@@ -1,0 +1,54 @@
+name: Container Images
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - src/**
+      - integrations/textbee/api/**
+      - integrations/textbee/web/**
+      - Dockerfile
+      - .github/workflows/containers.yml
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - name: gateway
+            context: .
+            file: Dockerfile
+          - name: textbee-api
+            context: integrations/textbee/api
+            file: integrations/textbee/api/Dockerfile
+          - name: textbee-web
+            context: integrations/textbee/web
+            file: integrations/textbee/web/Dockerfile
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ${{ matrix.context }}
+          file: ${{ matrix.file }}
+          push: true
+          tags: ghcr.io/bido75/textbee-gateway/${{ matrix.name }}:latest
+          build-args: |
+            NEXT_PUBLIC_API_BASE_URL=https://textbee-api.giscop.com/api/v1
+            NEXT_PUBLIC_SITE_URL=https://textbee.giscop.com
+            NEXT_PUBLIC_TURNSTILE_SITE_KEY=1x00000000000000000000AA
+            NEXT_PUBLIC_GOOGLE_CLIENT_ID=413549308722-ipmpnsv50v6431ch160ctkan74022fik.apps.googleusercontent.com
+          cache-from: type=gha,scope=${{ matrix.name }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.name }}
+

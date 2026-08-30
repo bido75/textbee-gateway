@@ -1,0 +1,36 @@
+runtimeMode: MOCK
+providers:
+  - id: textbee-dev
+    type: textbee
+    capabilities: [sms, mms]
+    config:
+      apiKey: "${TEXTBEE_API_KEY}"
+      deviceId: "android-sim-01"
+      baseUrl: "http://mock-textbee:8090/api/v1"
+      webhookSigningSecret: "${TEXTBEE_WEBHOOK_SIGNING_SECRET}"
+cellularVoiceProviders:
+  - id: cellular-voice-dev
+    type: asterisk-chan-mobile
+    config:
+      baseUrl: "http://asterisk:8088"
+      username: "ai-gateway"
+      password: "dev-ari-password"
+      appName: "ai-gateway-mobile"
+      chanMobileDevice: "simulated"
+      channelTemplate: "Local/outbound@sim-cellular"
+      simulated: true
+cellularEndpoints:
+  - id: android-home-01
+    phoneNumber: "+13025550123"
+    lineNumberStatus: demo
+    capabilities: [sms, mms, voice]
+    messaging: { provider: textbee-dev }
+    voice: { provider: cellular-voice-dev }
+routing:
+  - { channel: sms, match: "*", provider: textbee-dev }
+  - { channel: mms, match: "*", provider: textbee-dev }
+persistence:
+  type: postgres+redis
+  config:
+    postgresUrl: "${POSTGRES_URL}"
+    redisUrl: "${REDIS_URL}"

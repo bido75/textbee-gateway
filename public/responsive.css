@@ -1,0 +1,54 @@
+/* Evaluator-driven responsive refinements kept separate from the base visual system. */
+.brand div span { font-size: .68rem; }
+.environment, .count { font-size: .7rem; }
+.eyebrow, .channel span { font-size: .7rem; }
+.identity-foot, .metrics span, .metrics small { font-size: .7rem; }
+.status-message { font-size: .74rem; }
+th { font-size: .7rem; padding: .95rem 1rem; }
+td { font-size: .82rem; line-height: 1.5; padding: 1.05rem 1rem; }
+.state, label { font-size: .7rem; }
+.turn-meta { font-size: .68rem; }
+.action-form h3 b { font-size: .68rem; }
+.infrastructure strong { font-size: .72rem; }
+.infrastructure li span { font-size: .7rem; line-height: 1.4; }
+footer { font-size: .68rem; }
+
+@media (max-width: 900px) {
+  .patch-display {
+    grid-template-columns: auto minmax(24px, 1fr) auto minmax(24px, 1fr) auto;
+    gap: .55rem;
+  }
+  .signal-trace.reverse { display: flex; }
+  .channel.voice { display: block; text-align: right; }
+  .signal-trace { gap: 3px; }
+  .signal-trace i:nth-of-type(n+5) { display: none; }
+  .infrastructure ol { grid-template-columns: repeat(3, 1fr); overflow: visible; }
+  .infrastructure li { min-width: 0; border-bottom: 1px solid var(--line); }
+  .infrastructure li:nth-child(3) { border-right: 0; }
+  .infrastructure li:nth-child(n+4) { border-bottom: 0; }
+}
+
+@media (max-width: 600px) {
+  .patch-display {
+    grid-template-columns: minmax(62px, auto) minmax(16px, 1fr) 66px minmax(16px, 1fr) minmax(62px, auto);
+    gap: .3rem;
+  }
+  .signal-trace { gap: 2px; }
+  .signal-trace i { width: 1px; }
+  .signal-trace i:nth-of-type(n+4) { display: none; }
+  .channel strong { font-size: .7rem; }
+  .line-lamp { min-width: 66px; font-size: .66rem; }
+  .infrastructure ol { grid-template-columns: 1fr 1fr; }
+  .infrastructure li,
+  .infrastructure li:nth-child(n+4) {
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    padding: 1rem;
+  }
+  .infrastructure li:nth-child(2n) { border-right: 0; }
+  .infrastructure li:last-child {
+    grid-column: 1 / -1;
+    border-right: 0;
+    border-bottom: 0;
+  }
+}

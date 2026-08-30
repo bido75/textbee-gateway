@@ -1,0 +1,21 @@
+runtimeMode: MOCK
+providers:
+  - id: messaging-test
+    type: stub
+    capabilities: [sms, mms]
+    config: {}
+cellularVoiceProviders:
+  - id: voice-test
+    type: stub
+    config: {}
+cellularEndpoints:
+  - id: android-test-01
+    phoneNumber: "+13025550123"
+    lineNumberStatus: demo
+    capabilities: [sms, mms, voice]
+    messaging: { provider: messaging-test }
+    voice: { provider: voice-test }
+routing:
+  - { channel: sms, match: "*", provider: messaging-test }
+  - { channel: mms, match: "*", provider: messaging-test }
+persistence: { type: memory }

@@ -1,0 +1,71 @@
+name: ai-comms-edge-dev
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: ai_comms
+      POSTGRES_USER: ai_comms
+      POSTGRES_PASSWORD: dev-only-password
+    volumes: [postgres_data:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U ai_comms -d ai_comms"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  redis:
+    image: redis:7-alpine
+    command: [redis-server, --save, "60", "1", --appendonly, "yes"]
+    volumes: [redis_data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  asterisk:
+    image: andrius/asterisk:20
+    volumes:
+      - ./docker/asterisk-dev/ari.conf:/etc/asterisk/ari.conf:ro
+      - ./docker/asterisk-dev/http.conf:/etc/asterisk/http.conf:ro
+      - ./docker/asterisk-dev/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./docker/asterisk-dev/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+    healthcheck:
+      test: [CMD-SHELL, "asterisk -rx 'core show uptime' >/dev/null 2>&1"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+  mock-textbee:
+    build:
+      context: .
+      dockerfile: docker/mock-textbee.Dockerfile
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8090/healthz').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+  gateway:
+    build: .
+    environment:
+      GATEWAY_CONFIG_PATH: ./src/config/config.dev.yaml
+      HTTP_PORT: "8080"
+      API_KEY: dev-local-key
+      DEV_SIMULATION: "true"
+      DEFAULT_VOICE_PROVIDER: stub
+      MEDIA_ENGINE_HOST: gateway
+      POSTGRES_URL: postgres://ai_comms:dev-only-password@postgres:5432/ai_comms
+      REDIS_URL: redis://redis:6379
+      TEXTBEE_API_KEY: dev-textbee-key
+      TEXTBEE_WEBHOOK_SIGNING_SECRET: dev-webhook-secret
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+      asterisk: { condition: service_healthy }
+      mock-textbee: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/readyz').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+volumes:
+  postgres_data:
+  redis_data:

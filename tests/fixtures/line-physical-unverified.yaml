@@ -1,0 +1,6 @@
+runtimeMode: PHYSICAL_EDGE
+providers: []
+routing: []
+cellularEndpoints:
+  - id: android-home-01
+    capabilities: [sms, voice]

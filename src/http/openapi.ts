@@ -1,0 +1,33 @@
+export const openApiDocument = {
+  openapi: "3.1.0",
+  info: { title: "AI Communications Gateway", version: "0.2.0" },
+  security: [{ bearerAuth: [] }],
+  components: { securitySchemes: { bearerAuth: { type: "http", scheme: "bearer" } } },
+  paths: {
+    "/livez": { get: { summary: "Process liveness", security: [] } },
+    "/readyz": { get: { summary: "Dependency and endpoint readiness", security: [] } },
+    "/auth/session": {
+      get: { summary: "Read dashboard authentication state", security: [] },
+      post: { summary: "Create an HTTP-only dashboard session", security: [] },
+      delete: { summary: "Clear the dashboard session", security: [] },
+    },
+    "/webhooks/textbee/{providerId}": { post: { summary: "Receive a signed TextBee provider webhook", security: [] } },
+    "/v1/endpoints": { get: { summary: "List logical cellular endpoints" } },
+    "/v1/endpoints/{id}": { get: { summary: "Read endpoint metadata and provider status" } },
+    "/v1/messages": { post: { summary: "Send endpoint-aware SMS/MMS" } },
+    "/v1/calls": { get: { summary: "List calls" }, post: { summary: "Place an endpoint-aware call" } },
+    "/v1/calls/{id}": { get: { summary: "Read a call" } },
+    "/v1/calls/{id}/answer": { post: { summary: "Answer a call" } },
+    "/v1/calls/{id}/hangup": { post: { summary: "Hang up a call" } },
+    "/v1/calls/{id}/hold": { post: { summary: "Hold or resume a call" } },
+    "/v1/calls/{id}/dtmf": { post: { summary: "Send DTMF digits" } },
+    "/v1/calls/{id}/transfer": { post: { summary: "Transfer a call" } },
+    "/v1/calls/{id}/voice-session": {
+      post: { summary: "Start realtime media for a call" },
+      delete: { summary: "Stop realtime media for a call" },
+    },
+    "/v1/conversations": { get: { summary: "Read a durable cross-channel conversation" } },
+    "/v1/dev/simulate/calls": { post: { summary: "Inject a simulated inbound call in MOCK mode" } },
+    "/v1/dev/simulate/calls/{id}/transcript": { post: { summary: "Record a simulated transcript turn in MOCK mode" } },
+  },
+};

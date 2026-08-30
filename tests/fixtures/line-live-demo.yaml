@@ -1,0 +1,8 @@
+runtimeMode: LIVE_SERVICES
+providers: []
+routing: []
+cellularEndpoints:
+  - id: android-home-01
+    phoneNumber: "+13025550123"
+    lineNumberStatus: demo
+    capabilities: [sms, voice]

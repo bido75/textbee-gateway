@@ -1,0 +1,87 @@
+name: ai-comms-textbee
+services:
+  textbee-mongo:
+    image: mongo:7
+    restart: unless-stopped
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: textbee
+      MONGO_INITDB_ROOT_PASSWORD: ${TEXTBEE_MONGO_PASSWORD:-textbee-local-only}
+      MONGO_INITDB_DATABASE: textbee
+    volumes: [textbee_mongo_data:/data/db]
+    healthcheck:
+      test: [CMD, mongosh, --quiet, --eval, "db.adminCommand('ping').ok"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  textbee-redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, "yes"]
+    volumes: [textbee_redis_data:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+
+  textbee-api:
+    build: ./integrations/textbee/api
+    restart: unless-stopped
+    command: [node, /bootstrap/docker-bootstrap-firebase.mjs]
+    environment:
+      PORT: "3001"
+      MONGO_URI: mongodb://textbee:${TEXTBEE_MONGO_PASSWORD:-textbee-local-only}@textbee-mongo:27017/textbee?authSource=admin
+      REDIS_URL: redis://textbee-redis:6379
+      USE_SMS_QUEUE: "true"
+      TEXTBEE_SELF_HOSTED: "true"
+      FRONTEND_URL: https://textbee.giscop.com
+      NEXT_PUBLIC_SITE_URL: https://textbee.giscop.com
+      CLOUDFLARE_TURNSTILE_SECRET_KEY: 1x0000000000000000000000000000000AA
+      GOOGLE_CLIENT_ID: 413549308722-ipmpnsv50v6431ch160ctkan74022fik.apps.googleusercontent.com
+      FIREBASE_ADMIN_JSON: /run/secrets/firebase-admin.json
+    volumes:
+      - ./integrations/textbee/api/docker-bootstrap-firebase.mjs:/bootstrap/docker-bootstrap-firebase.mjs:ro
+      - ${TEXTBEE_FIREBASE_ADMIN_JSON:?Set TEXTBEE_FIREBASE_ADMIN_JSON to the Firebase Admin service-account JSON}:/run/secrets/firebase-admin.json:ro
+    ports: ["127.0.0.1:3011:3001"]
+    depends_on:
+      textbee-mongo: { condition: service_healthy }
+      textbee-redis: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:3001/]
+      interval: 5s
+      timeout: 5s
+      retries: 40
+      start_period: 15s
+
+  textbee-web:
+    build:
+      context: ./integrations/textbee/web
+      args:
+        NEXT_PUBLIC_API_BASE_URL: https://textbee-api.giscop.com/api/v1
+        NEXT_PUBLIC_SITE_URL: https://textbee.giscop.com
+        NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+        NEXT_PUBLIC_GOOGLE_CLIENT_ID: 413549308722-ipmpnsv50v6431ch160ctkan74022fik.apps.googleusercontent.com
+    restart: unless-stopped
+    environment:
+      PORT: "3000"
+      HOSTNAME: "0.0.0.0"
+      NEXT_PUBLIC_API_BASE_URL: https://textbee-api.giscop.com/api/v1
+      NEXT_PUBLIC_SITE_URL: https://textbee.giscop.com
+      NEXTAUTH_URL: https://textbee.giscop.com
+      NEXTAUTH_SECRET: ${TEXTBEE_WEB_SESSION_SECRET:-local-textbee-session-change-before-production}
+      NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+      NEXT_PUBLIC_GOOGLE_CLIENT_ID: 413549308722-ipmpnsv50v6431ch160ctkan74022fik.apps.googleusercontent.com
+    ports: ["127.0.0.1:3010:3000"]
+    depends_on:
+      textbee-api: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, wget, -q, --spider, http://127.0.0.1:3000/login]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+      start_period: 10s
+
+volumes:
+  textbee_mongo_data:
+  textbee_redis_data:

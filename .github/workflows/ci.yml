@@ -1,0 +1,67 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+jobs:
+  gateway:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm test
+
+  textbee-api:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integrations/textbee/api
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: integrations/textbee/api/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test -- --runInBand
+      - run: pnpm build
+
+  textbee-web:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: integrations/textbee/web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 9.14.2
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: integrations/textbee/web/pnpm-lock.yaml
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm typecheck
+      - run: pnpm test
+      - run: pnpm build
+        env:
+          NEXT_PUBLIC_API_BASE_URL: https://textbee-api.giscop.com/api/v1
+          NEXT_PUBLIC_SITE_URL: https://textbee.giscop.com
+          NEXT_PUBLIC_TURNSTILE_SITE_KEY: 1x00000000000000000000AA
+          NEXT_PUBLIC_GOOGLE_CLIENT_ID: 413549308722-ipmpnsv50v6431ch160ctkan74022fik.apps.googleusercontent.com
+

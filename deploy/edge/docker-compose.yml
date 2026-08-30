@@ -1,0 +1,15 @@
+services:
+  gateway:
+    build: ../..
+    env_file: .env
+    network_mode: host
+    restart: unless-stopped
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/readyz').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+# Asterisk and BlueZ intentionally run natively on the Linux edge host for
+# the first real chan_mobile validation. Postgres/Redis may be local private
+# services or reachable through a private WireGuard/Tailscale overlay.
+

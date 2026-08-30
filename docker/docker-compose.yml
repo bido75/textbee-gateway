@@ -1,0 +1,80 @@
+version: "3.8"
+
+# Self-hosted PBX core: free/open-source, no per-minute platform fees.
+#
+#   PSTN carrier (wholesale SIP trunk)
+#            │
+#            ▼
+#        Kamailio  ── SIP registrar / SBC / NAT traversal / load balancing
+#            │
+#            ▼
+#        Asterisk  ── call logic, IVR, voicemail, ARI (used by the MCP adapter)
+#            │
+#            ▼
+#        RTPengine ── media relay (RTP/SRTP), keeps Asterisk out of the media path
+#
+# The AI Communications Gateway (this repo's Node service) talks to Asterisk's
+# ARI over HTTP/WebSocket — see src/adapters/asterisk-ari-adapter.ts.
+#
+# You still need ONE wholesale SIP trunk (VoIP.ms, Telnyx, BulkVS, Flowroute,
+# ...) for actual PSTN in/out — that's the only paid piece in this stack.
+
+services:
+  kamailio:
+    image: kamailio/kamailio:5.8
+    container_name: kamailio
+    restart: unless-stopped
+    network_mode: host   # simplest correct setup for SIP/RTP NAT traversal
+    volumes:
+      - ./kamailio/kamailio.cfg:/etc/kamailio/kamailio.cfg:ro
+    command: ["kamailio", "-DD", "-E"]
+
+  asterisk:
+    image: andrius/asterisk:20
+    container_name: asterisk
+    restart: unless-stopped
+    network_mode: host
+    # For the optional chan_mobile (Bluetooth) cellular voice prototype,
+    # also pass through the host's Bluetooth device, e.g.:
+    #   devices:
+    #     - /dev/vhci
+    #   privileged: true   # chan_mobile/BlueZ typically needs this in a container
+    volumes:
+      - ./asterisk/pjsip.conf:/etc/asterisk/pjsip.conf:ro
+      - ./asterisk/extensions.conf:/etc/asterisk/extensions.conf:ro
+      - ./asterisk/ari.conf:/etc/asterisk/ari.conf:ro
+      - ./asterisk/http.conf:/etc/asterisk/http.conf:ro
+      - ./asterisk/mobile.conf:/etc/asterisk/mobile.conf:ro
+      - asterisk-recordings:/var/spool/asterisk/recording
+    depends_on:
+      - rtpengine
+
+  rtpengine:
+    image: drachtio/rtpengine:latest
+    container_name: rtpengine
+    restart: unless-stopped
+    network_mode: host
+    command:
+      - --interface=lo
+      - --listen-ng=127.0.0.1:22222
+      - --port-min=30000
+      - --port-max=40000
+
+  # The Node MCP gateway itself — build with the Dockerfile in the repo root
+  # (see ../Dockerfile) or run it outside Docker during development.
+  ai-comms-gateway:
+    build:
+      context: ..
+      dockerfile: Dockerfile
+    container_name: ai-comms-gateway
+    restart: unless-stopped
+    network_mode: host
+    env_file:
+      - ../.env
+    volumes:
+      - ../src/config:/app/src/config:ro
+    depends_on:
+      - asterisk
+
+volumes:
+  asterisk-recordings:
