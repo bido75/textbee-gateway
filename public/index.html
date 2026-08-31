@@ -8,6 +8,7 @@
   <title>AI Communications Gateway</title>
   <link rel="stylesheet" href="/styles.css">
   <link rel="stylesheet" href="/responsive.css">
+  <link rel="stylesheet" href="/auth.css?v=20260830-auth3">
 </head>
 <body>
   <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -64,7 +65,7 @@
     </section>
 
     <section class="action-panel" aria-labelledby="actions-title">
-      <header><div><span class="eyebrow">LINE CONTROL</span><h2 id="actions-title">Operator actions</h2></div><label class="token-field">API TOKEN <small id="auth-state">CHECKING</small><input id="api-token" type="password" autocomplete="current-password" spellcheck="false"></label></header>
+      <header><div><span class="eyebrow">LINE CONTROL</span><h2 id="actions-title">Operator actions</h2></div><form id="auth-form" class="token-field"><label>GATEWAY API KEY <small id="auth-state">CHECKING</small><span class="token-control"><input id="api-token" type="password" autocomplete="current-password" spellcheck="false"><button id="auth-submit" type="submit">SAVE SESSION</button></span><em>Authenticates this operator console. The TextBee provider key is configured server-side.</em></label></form></header>
       <div class="action-grid">
         <form id="sms-form" class="action-form"><h3>Send SMS</h3><label>From endpoint<select name="from" class="endpoint-select" required></select></label><label>To<input name="to" type="tel" placeholder="+13025550198" required></label><label>Message<textarea name="body" rows="3" maxlength="1600" placeholder="Message body" required></textarea></label><button type="submit">TRANSMIT MESSAGE <span>→</span></button></form>
         <form id="call-form" class="action-form"><h3>Place call</h3><label>From endpoint<select name="from" class="endpoint-select" required></select></label><label>To<input name="to" type="tel" placeholder="+13025550198" required></label><p>Routes through Asterisk ARI and the configured cellular voice provider.</p><button type="submit">OPEN VOICE CHANNEL <span>→</span></button></form>
@@ -75,6 +76,6 @@
     <section class="infrastructure" aria-labelledby="infra-title"><div><span class="eyebrow">PRIVATE SERVICE PLANE</span><h2 id="infra-title">Infrastructure path</h2><p>Not exposed to the public network.</p></div><ol><li><i></i><strong>POSTGRES</strong><span>durable history</span></li><li><i></i><strong>REDIS</strong><span>replay protection</span></li><li><i></i><strong>ASTERISK ARI</strong><span>call control</span></li><li><i></i><strong>EXTERNALMEDIA</strong><span>RTP bridge</span></li><li><i></i><strong>MOCK TEXTBEE</strong><span>simulated SMS</span></li></ol></section>
   </main>
   <footer><span>AI COMMUNICATIONS GATEWAY / LOCAL OPERATOR CONSOLE</span><a href="/openapi.json">OPENAPI SPEC ↗</a></footer>
-  <script src="/app.js?v=20260830-auth2" defer></script>
+  <script src="/app.js?v=20260830-auth3" defer></script>
 </body>
 </html>

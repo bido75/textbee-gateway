@@ -1,0 +1,28 @@
+.token-field {
+  width: min(500px, 52%);
+  margin: 0;
+}
+
+.token-control {
+  display: grid;
+  grid-template-columns: minmax(170px, 1fr) auto;
+  gap: 0.45rem;
+}
+
+.token-control button,
+.token-control input {
+  padding: 0.5rem 0.7rem;
+}
+
+.token-field em {
+  color: var(--muted);
+  font-style: normal;
+  font-weight: 400;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+  .token-field { width: 100%; }
+  .token-control { grid-template-columns: 1fr; }
+}
