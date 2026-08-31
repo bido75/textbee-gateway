@@ -25,6 +25,11 @@ test("REST is authenticated and provider-neutral", async () => {
     const webhookRoot = await fetch(`${base}/`, { headers: { "x-forwarded-host": "hooks-comms.giscop.com" } });
     assert.equal(webhookRoot.status, 200);
     assert.equal(((await webhookRoot.json()) as any).service, "ai-comms-provider-webhooks");
+    const webhookBrowserProbe = await fetch(`${base}/webhooks/textbee/textbee-dev`, { headers: { "x-forwarded-host": "hooks-comms.giscop.com" } });
+    assert.equal(webhookBrowserProbe.status, 405);
+    assert.equal(webhookBrowserProbe.headers.get("allow"), "POST");
+    const webhookFavicon = await fetch(`${base}/favicon.ico`, { headers: { "x-forwarded-host": "hooks-comms.giscop.com" } });
+    assert.equal(webhookFavicon.status, 204);
     assert.equal((await fetch(`${base}/v1/endpoints`, { headers: { "x-forwarded-host": "hooks-comms.giscop.com", authorization: "Bearer test-key" } })).status, 404);
     assert.equal((await fetch(`${base}/v1/endpoints`)).status, 401);
     const anonymousSession = await fetch(`${base}/auth/session`);

@@ -22,6 +22,7 @@ export async function createHttpApp() {
   app.use((req, res, next) => {
     if (!isWebhookHost(req)) return next();
     if (req.path === "/") return res.json({ service: "ai-comms-provider-webhooks", status: "ok", acceptedPaths: ["/webhooks/textbee/:providerId"] });
+    if (req.path === "/favicon.ico") return res.status(204).end();
     if (req.path === "/livez" || req.path === "/readyz" || req.path.startsWith("/webhooks/")) return next();
     return res.status(404).json({ error: { code: "not_found", message: "The webhook hostname only accepts provider webhook routes" } });
   });
@@ -35,6 +36,16 @@ export async function createHttpApp() {
     const readiness = await runtime.readiness();
     res.status(readiness.ready ? 200 : 503).json({ status: readiness.ready ? (readiness.degraded ? "degraded" : "ready") : "not_ready", mode: runtime.mode, components: readiness });
   }));
+
+  app.get("/webhooks/textbee/:providerId", (_req, res) => {
+    res.setHeader("allow", "POST");
+    return res.status(405).json({
+      error: {
+        code: "method_not_allowed",
+        message: "TextBee webhook endpoints accept signed POST deliveries; opening this URL in a browser sends GET.",
+      },
+    });
+  });
 
   app.post("/webhooks/textbee/:providerId", express.text({ type: "*/*", limit: "256kb" }), async (req, res) => {
     const adapter = runtime.manager.getAdapter(req.params.providerId);
