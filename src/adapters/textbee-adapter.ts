@@ -111,6 +111,9 @@ export class TextBeeAdapter implements CommunicationAdapter {
     body: string,
     opts?: SendMessageOptions
   ): Promise<MessageRecord> {
+    if (opts?.mediaUrls?.length) {
+      throw new Error("Self-hosted TextBee does not support MMS attachments yet");
+    }
     const url = `${this.config.baseUrl}/gateway/send-sms`;
 
     const res = await fetch(url, {
@@ -129,8 +132,17 @@ export class TextBeeAdapter implements CommunicationAdapter {
       }),
     });
 
+    const responseBody = await res.text().catch(() => "");
+    let response: { data?: { smsBatchId?: string } } = {};
+    if (responseBody) {
+      try { response = JSON.parse(responseBody); } catch { /* error body is reported below */ }
+    }
+
     const record: MessageRecord = {
-      id: newId("msg"),
+      // TextBee emits delivery webhooks with smsBatchId. Each adapter call
+      // sends to one recipient, so using that durable provider id lets later
+      // MESSAGE_* events update this exact gateway record.
+      id: response.data?.smsBatchId ?? newId("msg"),
       provider: this.id,
       kind: opts?.mediaUrls?.length ? "mms" : "sms",
       direction: "outbound",
@@ -139,12 +151,11 @@ export class TextBeeAdapter implements CommunicationAdapter {
       body,
       mediaUrls: opts?.mediaUrls,
       sentAt: new Date().toISOString(),
-      status: res.ok ? "sent" : "failed",
+      status: res.ok ? "queued" : "failed",
     };
 
     if (!res.ok) {
-      const text = await res.text().catch(() => "");
-      throw new Error(`TextBee send-sms failed (${res.status}): ${text}`);
+      throw new Error(`TextBee send-sms failed (${res.status}): ${responseBody}`);
     }
 
     return record;
@@ -185,15 +196,27 @@ export class TextBeeAdapter implements CommunicationAdapter {
    */
   async handleInboundWebhook(payload: {
     smsId?: string;
-    sender: string;
-    message: string;
+    sender?: string;
+    message?: string;
     receivedAt?: string;
     deviceId?: string;
     webhookEvent?: string;
     mediaUrls?: string[];
+    smsBatchId?: string;
+    status?: string;
+    idempotencyKey?: string;
   }): Promise<{ ingested: boolean; reason?: string }> {
     if (payload.webhookEvent && payload.webhookEvent !== "MESSAGE_RECEIVED") {
-      return { ingested: false, reason: `ignored event type "${payload.webhookEvent}"` };
+      const status = this.mapDeliveryStatus(payload.webhookEvent, payload.status);
+      const messageId = payload.smsBatchId ?? payload.smsId;
+      if (!status || !messageId) {
+        return { ingested: false, reason: `ignored event type "${payload.webhookEvent}"` };
+      }
+      const dedupeId = payload.idempotencyKey ?? `${payload.webhookEvent}:${payload.smsId ?? messageId}`;
+      const firstTime = await this.checkAndMarkSeen(dedupeId);
+      if (!firstTime) return { ingested: false, reason: "duplicate delivery status" };
+      this.handler?.({ type: "message.status", messageId, status });
+      return { ingested: true };
     }
 
     if (payload.smsId) {
@@ -201,6 +224,10 @@ export class TextBeeAdapter implements CommunicationAdapter {
       if (!firstTime) {
         return { ingested: false, reason: "duplicate delivery (already processed this smsId)" };
       }
+    }
+
+    if (!payload.sender || typeof payload.message !== "string") {
+      return { ingested: false, reason: "MESSAGE_RECEIVED requires sender and message" };
     }
 
     const event: AdapterEvent = {
@@ -220,6 +247,13 @@ export class TextBeeAdapter implements CommunicationAdapter {
     };
     this.handler?.(event);
     return { ingested: true };
+  }
+
+  private mapDeliveryStatus(event: string, providerStatus?: string): MessageRecord["status"] | undefined {
+    if (event === "MESSAGE_DELIVERED" || providerStatus === "delivered") return "delivered";
+    if (event === "MESSAGE_FAILED" || providerStatus === "failed") return "failed";
+    if (event === "MESSAGE_SENT" || providerStatus === "sent" || providerStatus === "dispatched") return "sent";
+    return undefined;
   }
 
   async shutdown(): Promise<void> {

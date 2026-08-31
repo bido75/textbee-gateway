@@ -1,0 +1,52 @@
+name: ai-comms-gateway-live
+services:
+  postgres:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ai_comms
+      POSTGRES_USER: ai_comms
+      POSTGRES_PASSWORD: ${GATEWAY_POSTGRES_PASSWORD:?Set GATEWAY_POSTGRES_PASSWORD}
+    volumes: [gateway_live_postgres:/var/lib/postgresql/data]
+    healthcheck:
+      test: [CMD-SHELL, "pg_isready -U ai_comms -d ai_comms"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: [redis-server, --appendonly, "yes"]
+    volumes: [gateway_live_redis:/data]
+    healthcheck:
+      test: [CMD, redis-cli, ping]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+  gateway:
+    build: .
+    restart: unless-stopped
+    environment:
+      GATEWAY_CONFIG_PATH: ./src/config/config.textbee.yaml
+      HTTP_PORT: "8080"
+      API_KEY: ${API_KEY:?Set a distinct gateway operator API key}
+      DASHBOARD_SESSION_TTL_SECONDS: ${DASHBOARD_SESSION_TTL_SECONDS:-28800}
+      POSTGRES_URL: postgres://ai_comms:${GATEWAY_POSTGRES_PASSWORD}@postgres:5432/ai_comms
+      REDIS_URL: redis://redis:6379
+      TEXTBEE_API_KEY: ${TEXTBEE_API_KEY:?Set the rotated TextBee provider key}
+      TEXTBEE_DEVICE_ID: ${TEXTBEE_DEVICE_ID:?Set the paired Android device id}
+      TEXTBEE_BASE_URL: ${TEXTBEE_BASE_URL:-https://textbee-api.giscop.com/api/v1}
+      TEXTBEE_WEBHOOK_SIGNING_SECRET: ${TEXTBEE_WEBHOOK_SIGNING_SECRET:?Set the TextBee webhook signing secret}
+      CELLULAR_LINE_NUMBER: ${CELLULAR_LINE_NUMBER:?Set the SIM line number in E.164 format}
+    ports: ["127.0.0.1:8080:8080"]
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    healthcheck:
+      test: [CMD, node, -e, "fetch('http://127.0.0.1:8080/readyz').then(r=>{if(!r.ok)process.exit(1)})"]
+      interval: 5s
+      timeout: 3s
+      retries: 30
+volumes:
+  gateway_live_postgres:
+  gateway_live_redis:

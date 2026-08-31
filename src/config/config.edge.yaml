@@ -1,4 +1,4 @@
-runtimeMode: LIVE_SERVICES
+runtimeMode: PHYSICAL_EDGE
 providers:
   - id: textbee-self-hosted
     type: textbee
@@ -8,13 +8,22 @@ providers:
       deviceId: "${TEXTBEE_DEVICE_ID}"
       baseUrl: "${TEXTBEE_BASE_URL}"
       webhookSigningSecret: "${TEXTBEE_WEBHOOK_SIGNING_SECRET}"
-cellularVoiceProviders: []
+cellularVoiceProviders:
+  - id: chan-mobile-android-home-01
+    type: asterisk-chan-mobile
+    config:
+      baseUrl: "${ARI_BASE_URL}"
+      username: "${ARI_USERNAME}"
+      password: "${ARI_PASSWORD}"
+      appName: ai-gateway-mobile
+      chanMobileDevice: "${CHAN_MOBILE_DEVICE}"
 cellularEndpoints:
   - id: android-home-01
     phoneNumber: "${CELLULAR_LINE_NUMBER}"
     lineNumberStatus: configured
-    capabilities: [sms]
+    capabilities: [sms, voice]
     messaging: { provider: textbee-self-hosted }
+    voice: { provider: chan-mobile-android-home-01 }
 routing:
   - { channel: sms, match: "*", provider: textbee-self-hosted }
 persistence:

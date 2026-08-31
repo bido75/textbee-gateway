@@ -278,8 +278,14 @@ export class SessionManager {
     } else if (event.type === "message.incoming") {
       await this.store.saveMessage(event.message);
     } else if (event.type === "message.status") {
-      const msg = this.messages.get(event.messageId);
-      if (msg) await this.store.saveMessage(msg);
+      // Status webhooks can arrive after a restart, when the in-memory cache
+      // is empty. Fall back to durable storage before applying the update.
+      const msg = this.messages.get(event.messageId) ?? await this.store.getMessage(event.messageId);
+      if (msg) {
+        msg.status = event.status;
+        this.messages.set(msg.id, msg);
+        await this.store.saveMessage(msg);
+      }
     }
   }
 
