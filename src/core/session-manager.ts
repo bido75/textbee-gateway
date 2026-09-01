@@ -265,7 +265,7 @@ export class SessionManager {
       this.messages.set(event.message.id, event.message);
     } else if (event.type === "message.status") {
       const msg = this.messages.get(event.messageId);
-      if (msg) msg.status = event.status;
+      if (msg) msg.status = mergeMessageStatus(msg.status, event.status);
     }
   }
 
@@ -282,7 +282,7 @@ export class SessionManager {
       // is empty. Fall back to durable storage before applying the update.
       const msg = this.messages.get(event.messageId) ?? await this.store.getMessage(event.messageId);
       if (msg) {
-        msg.status = event.status;
+        msg.status = mergeMessageStatus(msg.status, event.status);
         this.messages.set(msg.id, msg);
         await this.store.saveMessage(msg);
       }
@@ -301,6 +301,28 @@ export class SessionManager {
     const adapter = this.mustGet(call.provider);
     return { call, adapter };
   }
+}
+
+/**
+ * Provider webhooks are delivered asynchronously and can arrive out of order.
+ * Never let an older lifecycle event downgrade a terminal or more advanced
+ * message state. A later delivered receipt is allowed to correct a premature
+ * failure because the carrier receipt is the strongest available evidence.
+ */
+export function mergeMessageStatus(
+  current: MessageRecord["status"],
+  incoming: MessageRecord["status"],
+): MessageRecord["status"] {
+  if (current === incoming) return current;
+  if (incoming === "delivered") return "delivered";
+  if (current === "delivered" || current === "received") return current;
+  if (current === "failed") return current;
+  if (incoming === "failed") return "failed";
+
+  const progress: Record<"queued" | "sent", number> = { queued: 0, sent: 1 };
+  return progress[incoming as "queued" | "sent"] > progress[current as "queued" | "sent"]
+    ? incoming
+    : current;
 }
 
 export function newId(prefix: string): string {
