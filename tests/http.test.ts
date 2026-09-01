@@ -15,8 +15,19 @@ test("REST is authenticated and provider-neutral", async () => {
   try {
     const dashboard = await fetch(`${base}/`);
     assert.equal(dashboard.status, 200);
-    assert.match(await dashboard.text(), /AI Communications Gateway/);
-    assert.equal((await fetch(`${base}/app.js`)).status, 200);
+    assert.match(dashboard.headers.get("cache-control") ?? "", /no-store/);
+    const dashboardHtml = await dashboard.text();
+    assert.match(dashboardHtml, /AI Communications Gateway/);
+    assert.match(dashboardHtml, /simulation-notice[^>]+hidden/);
+    assert.match(dashboardHtml, /app\.js\?v=20260831-runtime4/);
+    const appAsset = await fetch(`${base}/app.js`);
+    assert.equal(appAsset.status, 200);
+    assert.match(appAsset.headers.get("cache-control") ?? "", /no-store/);
+    const appSource = await appAsset.text();
+    assert.doesNotMatch(appSource, /dev-local-key|sessionStorage/);
+    assert.match(appSource, /refreshPublicStatus/);
+    const authStyles = await (await fetch(`${base}/auth.css`)).text();
+    assert.match(authStyles, /\[hidden\]\s*\{\s*display:\s*none\s*!important/);
     const spec = await (await fetch(`${base}/openapi.json`)).json() as any;
     assert.ok(spec.paths["/auth/session"]);
     assert.ok(spec.paths["/v1/endpoints/{id}"]);
@@ -52,6 +63,8 @@ test("REST is authenticated and provider-neutral", async () => {
     const ready = await (await fetch(`${base}/readyz`)).json() as any;
     assert.equal(ready.status, "ready");
     assert.equal(ready.components.persistence.ok, true);
+    assert.equal(ready.components.endpoints[0].endpointId, "android-test-01");
+    assert.deepEqual(ready.components.endpoints[0].capabilities, ["sms", "mms", "voice"]);
     const missingCall = await fetch(`${base}/v1/calls/no-such-call`, { headers });
     assert.equal(missingCall.status, 404);
     assert.equal(((await missingCall.json()) as any).error.code, "not_found");

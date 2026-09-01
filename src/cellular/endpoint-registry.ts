@@ -5,6 +5,7 @@ import { CellularEndpointConfig, CellularVoiceProvider } from "./types.js";
 export interface EndpointStatus {
   endpointId: string;
   phoneNumber?: string;
+  capabilities: string[];
   lineNumberStatus: "demo" | "configured" | "verified" | "unverified";
   overall: "online" | "degraded" | "offline";
   messaging: { available: boolean; provider?: string; detail: string };
@@ -201,6 +202,7 @@ export class CellularEndpointRegistry {
     return {
       endpointId,
       phoneNumber: resolved.config.phoneNumber,
+      capabilities: resolved.config.capabilities ?? [],
       lineNumberStatus: resolved.config.lineNumberStatus ?? "unverified",
       overall,
       voice: { available: voice.available, detail: voice.detail ?? "", provider: resolved.config.voice?.provider },

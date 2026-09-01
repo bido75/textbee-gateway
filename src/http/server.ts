@@ -28,8 +28,16 @@ export async function createHttpApp() {
   });
 
   const publicDirectory = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "../../public");
-  app.use(express.static(publicDirectory, { index: false, maxAge: process.env.NODE_ENV === "production" ? "1h" : 0 }));
-  app.get("/", (_req, res) => res.sendFile(path.join(publicDirectory, "index.html")));
+  app.use(express.static(publicDirectory, {
+    index: false,
+    etag: false,
+    maxAge: 0,
+    setHeaders: (res) => res.setHeader("cache-control", "no-store, max-age=0"),
+  }));
+  app.get("/", (_req, res) => {
+    res.setHeader("cache-control", "no-store, max-age=0");
+    res.sendFile(path.join(publicDirectory, "index.html"));
+  });
 
   app.get("/livez", (_req, res) => res.json({ status: "ok" }));
   app.get("/readyz", asyncHandler(async (_req, res) => {

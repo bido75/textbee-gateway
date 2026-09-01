@@ -1,3 +1,9 @@
+.notice[hidden],
+.simulate[hidden],
+[hidden] {
+  display: none !important;
+}
+
 .token-field {
   width: min(500px, 52%);
   margin: 0;
@@ -26,3 +32,4 @@
   .token-field { width: 100%; }
   .token-control { grid-template-columns: 1fr; }
 }
+.protected-control[aria-disabled="true"]{opacity:.58}.protected-control[aria-disabled="true"]:focus-within{opacity:.72}

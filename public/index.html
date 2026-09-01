@@ -6,9 +6,9 @@
   <meta name="color-scheme" content="dark">
   <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%230b0d0c'/%3E%3Cpath d='M6 16h5l3-7 4 14 3-7h5' fill='none' stroke='%23b8ff3d' stroke-width='3'/%3E%3C/svg%3E">
   <title>AI Communications Gateway</title>
-  <link rel="stylesheet" href="/styles.css">
-  <link rel="stylesheet" href="/responsive.css">
-  <link rel="stylesheet" href="/auth.css?v=20260830-auth3">
+  <link rel="stylesheet" href="/styles.css?v=20260831-runtime4">
+  <link rel="stylesheet" href="/responsive.css?v=20260831-runtime4">
+  <link rel="stylesheet" href="/auth.css?v=20260831-runtime4">
 </head>
 <body>
   <a class="skip-link" href="#workspace">Skip to workspace</a>
@@ -22,7 +22,7 @@
   </header>
 
   <main id="workspace">
-    <section id="simulation-notice" class="notice" aria-label="Simulation warning"><strong>SIMULATION LINK ACTIVE</strong><span>Docker validates software flow only. Bluetooth HFP, physical Android audio, SIM carrier routing, and <code>chan_mobile</code> remain unvalidated on hardware.</span></section>
+    <section id="simulation-notice" class="notice" aria-label="Simulation warning" hidden><strong>SIMULATION LINK ACTIVE</strong><span>Docker validates software flow only. Bluetooth HFP, physical Android audio, SIM carrier routing, and <code>chan_mobile</code> remain unvalidated on hardware.</span></section>
 
     <section class="identity-panel" aria-labelledby="identity-title">
       <div class="identity-meta"><span class="eyebrow">UNIFIED CELLULAR ENDPOINT</span><h1 id="identity-title">Loading line…</h1><p id="endpoint-id">Awaiting gateway</p></div>
@@ -49,33 +49,33 @@
       <article class="workspace-panel calls-panel">
         <header><div><span class="eyebrow">CHANNEL ACTIVITY</span><h2>Recent calls</h2></div><span id="call-count" class="count">0 RECORDS</span></header>
         <div class="table-wrap">
-          <table><thead><tr><th>Flow</th><th>Counterpart</th><th>State</th><th>Time</th></tr></thead><tbody id="calls-body"><tr><td colspan="4" class="empty">Loading call log…</td></tr></tbody></table>
+          <table><thead><tr><th>Flow</th><th>Counterpart</th><th>State</th><th>Time</th></tr></thead><tbody id="calls-body"><tr><td colspan="4" class="empty">Authenticate to load call history.</td></tr></tbody></table>
         </div>
       </article>
 
       <article class="workspace-panel conversation-panel">
         <header><div><span class="eyebrow">SHARED MEMORY</span><h2>Conversation inspector</h2></div><span class="count">SMS + VOICE</span></header>
         <form id="conversation-form" class="inline-form">
-          <label>Endpoint<select id="conversation-endpoint" required></select></label>
-          <label>Counterpart<input id="conversation-counterpart" type="tel" placeholder="+1 302 555 0198" required></label>
-          <button type="submit">LOAD</button>
+          <label>Endpoint<select id="conversation-endpoint" required disabled></select></label>
+          <label>Counterpart<input id="conversation-counterpart" type="tel" placeholder="+1 302 555 0198" required disabled></label>
+          <button type="submit" disabled>LOAD</button>
         </form>
-        <ol id="timeline" class="timeline"><li class="empty">Enter a counterpart to inspect the durable cross-channel timeline.</li></ol>
+        <ol id="timeline" class="timeline"><li class="empty">Authenticate to inspect the durable cross-channel timeline.</li></ol>
       </article>
     </section>
 
     <section class="action-panel" aria-labelledby="actions-title">
       <header><div><span class="eyebrow">LINE CONTROL</span><h2 id="actions-title">Operator actions</h2></div><form id="auth-form" class="token-field"><label>GATEWAY API KEY <small id="auth-state">CHECKING</small><span class="token-control"><input id="api-token" type="password" autocomplete="current-password" spellcheck="false"><button id="auth-submit" type="submit">SAVE SESSION</button></span><em>Authenticates this operator console. The TextBee provider key is configured server-side.</em></label></form></header>
       <div class="action-grid">
-        <form id="sms-form" class="action-form"><h3>Send SMS</h3><label>From endpoint<select name="from" class="endpoint-select" required></select></label><label>To<input name="to" type="tel" placeholder="+13025550198" required></label><label>Message<textarea name="body" rows="3" maxlength="1600" placeholder="Message body" required></textarea></label><button type="submit">TRANSMIT MESSAGE <span>→</span></button></form>
-        <form id="call-form" class="action-form"><h3>Place call</h3><label>From endpoint<select name="from" class="endpoint-select" required></select></label><label>To<input name="to" type="tel" placeholder="+13025550198" required></label><p>Routes through Asterisk ARI and the configured cellular voice provider.</p><button type="submit">OPEN VOICE CHANNEL <span>→</span></button></form>
-        <form id="simulate-form" class="action-form simulate"><h3>Simulate inbound <b>DEV ONLY</b></h3><label>To endpoint<select name="endpointId" class="endpoint-select" required></select></label><label>From<input name="from" type="tel" placeholder="+13025550198" required></label><p>Creates a simulated inbound cellular call. No real handset or carrier is used.</p><button type="submit">INJECT TEST CALL <span>↳</span></button></form>
+        <form id="sms-form" class="action-form protected-control" aria-disabled="true"><h3>Send SMS</h3><label>From endpoint<select name="from" class="endpoint-select" required disabled></select></label><label>To<input name="to" type="tel" placeholder="+13025550198" required disabled></label><label>Message<textarea name="body" rows="3" maxlength="1600" placeholder="Message body" required disabled></textarea></label><button type="submit" disabled>TRANSMIT MESSAGE <span>→</span></button></form>
+        <form id="call-form" class="action-form protected-control" aria-disabled="true"><h3>Place call</h3><label>From endpoint<select name="from" class="endpoint-select" required disabled></select></label><label>To<input name="to" type="tel" placeholder="+13025550198" required disabled></label><p>Routes through Asterisk ARI and the configured cellular voice provider.</p><button type="submit" disabled>OPEN VOICE CHANNEL <span>→</span></button></form>
+        <form id="simulate-form" class="action-form simulate protected-control" aria-disabled="true" hidden><h3>Simulate inbound <b>DEV ONLY</b></h3><label>To endpoint<select name="endpointId" class="endpoint-select" required disabled></select></label><label>From<input name="from" type="tel" placeholder="+13025550198" required disabled></label><p>Creates a simulated inbound cellular call. No real handset or carrier is used.</p><button type="submit" disabled>INJECT TEST CALL <span>↳</span></button></form>
       </div>
     </section>
 
     <section class="infrastructure" aria-labelledby="infra-title"><div><span class="eyebrow">PRIVATE SERVICE PLANE</span><h2 id="infra-title">Infrastructure path</h2><p>Not exposed to the public network.</p></div><ol><li><i></i><strong>POSTGRES</strong><span>durable history</span></li><li><i></i><strong>REDIS</strong><span>replay protection</span></li><li><i></i><strong>ASTERISK ARI</strong><span>call control</span></li><li><i></i><strong>EXTERNALMEDIA</strong><span>RTP bridge</span></li><li><i></i><strong id="textbee-plane">TEXTBEE</strong><span id="textbee-plane-detail">messaging provider</span></li></ol></section>
   </main>
   <footer><span>AI COMMUNICATIONS GATEWAY / LOCAL OPERATOR CONSOLE</span><a href="/openapi.json">OPENAPI SPEC ↗</a></footer>
-  <script src="/app.js?v=20260830-auth3" defer></script>
+  <script src="/app.js?v=20260831-runtime4" defer></script>
 </body>
 </html>
